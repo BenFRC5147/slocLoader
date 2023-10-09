@@ -7,3 +7,7 @@ slocLoader.NWAPI/bin/
 slocLoader.NWAPI/obj/
 GitHubUpdates/
 packages/
+/slocLoader.NWAPI/slocLoader.NWAPI.csproj
+/slocLoader/slocLoader.csproj
+*.json
+/.vs/slocLoader

@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using MapGeneration;
+using AdminToys;
 using PluginAPI.Core.Attributes;
 using slocLoader.AutoObjectLoader;
 
@@ -23,6 +24,7 @@ public sealed class slocPlugin
         try
         {
             _harmony.PatchAll();
+            RemoveMapEditorRebornPatch();
             Log.Info("Patching succeeded.");
         }
         catch (Exception e)
@@ -45,7 +47,7 @@ public sealed class slocPlugin
         API.PrefabsLoaded += SpawnDefault;
         if (SeedSynchronizer.MapGenerated)
             API.LoadPrefabs();
-        Log.Info("slocLoader has been enabled");
+        Log.Info("slocLoader has been enabled");     
     }
 
     [PluginUnload]
@@ -56,6 +58,36 @@ public sealed class slocPlugin
         API.PrefabsLoaded -= SpawnDefault;
         SeedSynchronizer.OnMapGenerated -= API.LoadPrefabs;
         Log.Info("slocLoader has been disabled");
+    }
+
+    private static void RemoveMapEditorRebornPatch()
+    {
+        var assembly = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(e => e.GetName().Name == "MapEditorReborn");
+        if (assembly == null)
+            return;
+        var patch = AccessTools.Method("MapEditorReborn.Patches.UpdatePositionServerPatch:Prefix");
+        if (patch == null)
+        {
+            
+            Log.Warning("Failed to find MapEditorReborn.Patches.UpdatePositionServerPatch type! Nested object scaling will behave weirdly!");
+            return;
+        }
+
+        var instance = AccessTools.Property("MapEditorReborn.MapEditorReborn:Singleton")?.GetValue(null);
+        if (instance == null)
+        {
+            Log.Warning("Failed to find MapEditorReborn.MapEditorReborn.Singleton property! Nested object scaling will behave weirdly!");
+            return;
+        }
+
+        if (AccessTools.Field("MapEditorReborn.MapEditorReborn:_harmony")?.GetValue(instance) is not Harmony harmony)
+        {
+            Log.Warning("Failed to find MapEditorReborn.MapEditorReborn._harmony field! Nested object scaling will behave weirdly!");
+            return;
+        }
+
+        harmony.Unpatch(AccessTools.Method(typeof(AdminToyBase), nameof(AdminToyBase.UpdatePositionServer)), patch);
+        Log.Info("Removed MapEditorReborn patch.");
     }
 
     private void SpawnDefault()
